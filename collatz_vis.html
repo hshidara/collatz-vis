@@ -1,0 +1,389 @@
+<!-- <!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <title>Simple test - scatter plot</title>
+</head>
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+<link rel="stylesheet" href="styles.css">
+<script src="https://d3js.org/d3-axis.v1.min.js"></script>
+<script src="https://d3js.org/d3-ease.v1.min.js"></script>
+<script src="https://d3js.org/d3-color.v1.min.js"></script>
+<script src="https://d3js.org/d3-dispatch.v1.min.js"></script>
+<script src="https://d3js.org/d3-ease.v1.min.js"></script>
+<script src="https://d3js.org/d3-interpolate.v1.min.js"></script>
+<script src="https://d3js.org/d3-selection.v1.min.js"></script>
+<script src="https://d3js.org/d3-timer.v1.min.js"></script>
+<script src="https://d3js.org/d3-transition.v1.min.js"></script>
+
+<body>
+
+  <h1>Scatter plot w/ animation</h1>
+
+  <button type="button" name="update_button" onclick="update_data()">update (random)</button>
+
+  <script src="script_transitions.js" type="text/javascript"></script>
+
+</body> -->
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <style>
+    .circle {
+      /* fill: gray; */
+      fill: black;
+      stroke: '#fff';
+      opacity:0.3;
+    }
+    .label {
+      fill: #777;
+    }
+    h1,h3{
+      color: #777;
+      text-align: center;
+    }
+    h4{
+      color: #777;
+      text-align: right;
+    }
+    text{
+      color: blue;
+    }
+  </style>
+</head>
+
+<body>
+<div>
+  <h1>Visualizing Collatz's Conjecture for Positive Integers 1 - 50</h1>
+  <!-- <h3 id="iterations_label">Iterations of Collatz to Converge (Y-Axis): <text></text> </h3> -->
+  <h3 id="integer_label">Positive Integer (X-Axis): <text></text> </h3>
+
+</div>
+
+<div id="scatter_container"></div>
+<div id="line_container"></div>
+<h4>
+  Programmed by Hide Shidara
+  <br>
+  advised by Chris Bryan
+</h4>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+var width = 800
+  , height = 350
+  , margin = {top: 50, right: 50, bottom: 100, left: 350}
+  , uid = 0
+  , datasetSize = 1
+  , domain_max = 50;
+// [0] is uid
+// [1] will be plotted on the x axis
+// [2] will be plotted on the y axis
+// [3] will be used as the radius
+var dataset = [];
+for (var i = 0 ; i < datasetSize ; i++) {
+  dataset.push(generateDatum());
+}
+// set up the scales
+var xScale = d3.scale.linear()
+      .range([0, width])
+      .domain([0, 100])
+      .nice();
+var yScale = d3.scale.linear()
+      .range([height, 0])
+      .domain([0, 100])
+      .nice();
+// set the axes
+var xAxis = d3.svg.axis()
+  .scale(xScale)
+  .orient('bottom')
+  .outerTickSize(1);
+var yAxis = d3.svg.axis()
+  .scale(yScale)
+  .orient('left')
+  .outerTickSize(1);
+// append the svg to the body of the page and set the width and height
+// append a 'g' element to group the circles together and 'translate'
+var svg = d3.select("#scatter_container").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+// draw the axes
+var svgXaxis = svg.append('g')
+    .attr({
+      'class': 'axis label'
+    , 'transform': 'translate(0,' + height + ')'
+    })
+    .call(xAxis);
+svgXaxis.append('text')
+    .attr({
+      'class': 'label'
+    , 'x': width / 2
+    , 'y': margin.bottom - 20
+    , 'text-anchor': 'middle'
+    })
+    .text('Positive Integer');
+// draw Y axis
+var svgYaxis = svg.append('g')
+    .attr({
+      'class': 'axis label'
+    })
+    .call(yAxis);
+svgYaxis.append('text')
+    .attr({
+      'class': 'label'
+    , 'transform': 'translate(-290,320)rotate(-90)'
+    , 'x': margin.right + 100
+    , 'y': height / 2
+    , 'text-anchor': 'middle'
+    })
+    .text('# iterations of Collatz to converge to 1');
+
+    // var piyg = d3.scaleSequential(d3.interpolateOranges(100));
+
+ // d3.interpolateOranges(t)
+
+// draw initial display
+update(1);
+update_call_stack(1);
+
+// add new data
+var count = 0;
+
+var interval = setInterval(function() {
+
+  // add a new datum
+  var d = generateDatum();
+  console.log('Adding new point ' + d);
+
+  dataset.push(d);
+  count++;
+  update(count);
+  update_call_stack(count,dataset[count][2]);
+
+  // var num_iterations = 0;
+  recursive(count);
+
+  update(count);
+  update_call_stack(count+1,dataset[count][2]);
+  if (count >= domain_max - 1) {
+    clearInterval(interval);
+    console.log('Added ' + count + ' points. Done.');
+  }
+}, 2000);
+
+var type = function (count,callback) {
+    if (pt_converged(count) == false) {
+        dataset[count][1] = collatz(dataset[count][1]);
+        dataset[count][2] = dataset[count][2] + 1;
+        console.log(dataset[count][1],dataset[count][2]);
+        update();
+
+        setTimeout(function () {
+            type(count,callback);
+        }, 400);
+    } else {
+        callback(count);
+    }
+};
+
+function recursive(ct) {
+    if (pt_converged(ct) == false) {
+        type(ct,recursive);
+    }
+};
+
+
+function update (ct) {
+  // update the scales' domain
+
+  // if(d3.max(dataset, function(d) { return d[1]; }) > x_max) x_max = d3.max(dataset, function(d) { return d[1]; });
+
+  // xScale.domain([0, d3.max(dataset, function(d) { return d[1]; })]);
+  // xScale.domain([0, x_max]);
+  yScale.domain([0, d3.max(dataset, function(d) { return d[2]; })]);
+  // data-join
+  var dot = svg.selectAll("circle")
+      .data(dataset, function(d) {return d[0]});
+  // udpate
+  dot.transition()
+      .duration(400)
+      .attr({
+        "cx": function(d) { return xScale(d[1]); }
+      , "cy": function(d) { return yScale(d[2]); }
+      , "r": function(d) {
+        if(d[1] != 1) return d[3];
+        else return d[3] / 2;
+         // return d[3] / 2;
+       }
+      // , "fill": function(d) { if(d[2] == 1) return "red"; }
+      })
+      .style("fill", function(d){
+        if (ct == 1 || d[0] == 1) return "gray";
+        else if(d[2] == 1 && d[0] != 1) return "blue";
+        else return "gray";
+      })
+      .attr("id", function(d){return d[0];});
+  // enter
+  dot.enter().append("circle")
+      .attr({
+        "class": "circle"
+      , "cx": function(d) { return xScale(d[1]); }
+      , "cy": function(d) { return yScale(d[2]); }
+      , "r": function(d) {
+        if(d[1] != 1) return d[3];
+        else return d[3] / 2;
+      }
+      // , "fill": function(d) { if(d[2] == 1) return "red"; }
+      })
+      .style("fill", function(d){
+        if (ct == 1 || d[0] == 1) return "gray";
+        else if(d[0] != 1 && d[2] == 1) return "blue";
+        else return "gray";
+      })
+      .attr("id", function(d){return d[0];});
+      // .style('opacity', 1e-6)
+    // .transition()
+      // .style('fill', 'green')
+      // .style('opacity', 1)
+    // .transition()
+      // .duration(700)
+      // .style('fill', null);
+  dot.exit().transition()
+      // .style('fill', 'red')
+    // .transition()
+      // .duration(700)
+      // .style('opacity', 1e-6)
+      .remove();
+  // update axes
+  svgXaxis.transition().duration(500)
+      .call(xAxis);
+  svgYaxis.transition().duration(500)
+      .call(yAxis);
+}
+function generateDatum () {
+  return [
+    uid++
+  , parseInt(uid) // initial number
+  , parseInt(1) // number of iterations to 1
+  , parseInt(8) //radius
+  ];
+}
+
+function collatz(i){
+  if(i%2 != 0) return (3*i) + 1
+  else return i/2
+};
+
+function pt_converged(i){
+    if(dataset[i][1] == 1) return true;
+    else return false;
+}
+
+function update_call_stack(ct,n){
+  // console.log(n);
+  // d3.select('#iterations_label').select('text').text(n);
+  d3.select('#integer_label').select('text').text(ct);
+
+};
+
+// -------------------------------------------------------------------------------------------- //
+//
+// // Set the dimensions of the canvas / graph
+// var line_margin = {top: 30, right: 20, bottom: 30, left: 50},
+//     line_width = 600 - line_margin.left - line_margin.right,
+//     line_height = 270 - line_margin.top - line_margin.bottom;
+//
+// // Parse the date / time
+// // var parseDate = d3.time.format("%d-%b-%y").parse;
+//
+// // Set the ranges
+// var line_x = d3.scale.linear().range([0, width]);
+// var line_y = d3.scale.linear().range([height, 0]);
+//
+// // Define the axes
+// var line_xAxis = d3.svg.axis().scale(line_x)
+//     .orient("bottom").ticks(25);
+//
+// var line_yAxis = d3.svg.axis().scale(line_y)
+//     .orient("left").ticks(10);
+//
+// // Define the line
+// var valueline = d3.svg.line()
+//     .x(function(d) { return line_x(d[1]); })
+//     .y(function(d) { return line_y(d[2]); });
+//
+// // Adds the svg canvas
+// var line_svg = d3.select("#line_container")
+//     .append("svg")
+//         .attr("width", width + line_margin.left + line_margin.right)
+//         .attr("height", height + line_margin.top + line_margin.bottom)
+//     .append("g")
+//         .attr("transform",
+//               "translate(" + line_margin.left + "," + line_margin.top + ")");
+//
+// // Get the data
+// // d3.csv("data.csv", function(error, data) {
+// //     data.forEach(function(d) {
+// //         d.date = parseDate(d.date);
+// //         d.close = +d.close;
+// //     });
+//
+//     // // Scale the range of the data
+//     line_x.domain(d3.extent(dataset, function(d) { return 1; }));
+//     line_y.domain([0, d3.max(dataset, function(d) { return 1; })]);
+//
+//     // Add the valueline path.
+//     line_svg.append("path")
+//         .attr("class", "line")
+//         .attr("d", valueline(dataset));
+//
+//     // Add the X Axis
+//     line_svg.append("g")
+//         .attr("class", "x axis")
+//         .attr("transform", "translate(0," + line_height + ")")
+//         .call(line_xAxis);
+//
+//     // Add the Y Axis
+//     svg.append("g")
+//         .attr("class", "y axis")
+//         .call(line_yAxis);
+//     updateData();
+// // });
+//
+// // ** Update data section (Called from the onclick)
+// function updateData(ct) {
+//
+//     // Get the data again
+//     // d3.csv("data-alt.csv", function(error, data) {
+//     //    	data.forEach(function(d) {
+// 	  //   	d.date = parseDate(d.date);
+// 	  //   	d.close = +d.close;
+// 	  //   });
+//
+//     	// Scale the range of the data again
+//     	line_x.domain(d3.extent(dataset, function(d) { return d[ct][1]; }));
+// 	    line_y.domain([0, d3.max(dataset, function(d) { return d[ct][2]; })]);
+//
+//     // Select the section we want to apply our changes to
+//     var line_svg = d3.select("#line_container").transition();
+//
+//     // Make the changes
+//         line_svg.select(".line")   // change the line
+//             .duration(500)
+//             .attr("d", valueline(dataset));
+//         line_svg.select(".x.axis") // change the x axis
+//             .duration(500)
+//             .call(line_xAxis);
+//         line_svg.select(".y.axis") // change the y axis
+//             .duration(500)
+//             .call(line_yAxis);
+//
+//     // });
+// }
+
+</script>
+</body>
